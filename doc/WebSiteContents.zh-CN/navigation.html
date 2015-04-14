@@ -1,0 +1,95 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+<title>Entities</title>
+<link type="text/css" rel="stylesheet" href="bootstrap.min.css" />
+</head>
+
+<body>
+
+<ul>
+	<li><a href="#DocCreateMenu">创建菜单</a></li>
+	<li><a href="#DocShowMenu">显示菜单</a></li>
+</ul>
+<p>每个网站应用都会有一些用来在页面/屏幕间导航的菜单。ASP.NET Boilerplate 提供了一个通用的基础框架用于创建显示菜单。</p>
+<h3 id="DocCreateMenu">创建菜单</h3>
+<p>一个应用可能包含许多不同的<a href="/Pages/Documents/Module-System">模块</a>，并且这些模块可能拥有自己的菜单项。
+为了定义菜单项，我们需要创建一个继承自 <strong>NavigationProvider</strong> 的类</p>
+<p>假设我们有一个主菜单如下所示：</p>
+<ul>
+	<li>Tasks</li>
+	<li>Reports</li>
+	<li>Administration<ul>
+		<li>User management</li>
+		<li>Role management</li>
+	</ul>
+	</li>
+</ul>
+<p>注意，管理员菜单项下有两个<strong>子菜单项</strong>。这个样例 NavigationProvider 类创建菜单的过程如下：</p>
+<pre lang="cs">public class SimpleTaskSystemNavigationProvider : NavigationProvider
+{
+    public override void SetNavigation(INavigationProviderContext context)
+    {
+        context.Manager.MainMenu
+            .AddItem(
+                new MenuItemDefinition(
+                    &quot;Tasks&quot;,
+                    new LocalizableString(&quot;Tasks&quot;, &quot;SimpleTaskSystem&quot;),
+                    url: &quot;/Tasks&quot;,
+                    icon: &quot;fa fa-tasks&quot;
+                    )
+            ).AddItem(
+                new MenuItemDefinition(
+                    &quot;Reports&quot;,
+                    new LocalizableString(&quot;Reports&quot;, &quot;SimpleTaskSystem&quot;),
+                    url: &quot;/Reports&quot;,
+                    icon: &quot;fa fa-bar-chart&quot;
+                    )
+            ).AddItem(
+                new MenuItemDefinition(
+                    &quot;Administration&quot;,
+                    new LocalizableString(&quot;Administration&quot;, &quot;SimpleTaskSystem&quot;),
+                    icon: &quot;fa fa-cogs&quot;
+                    ).AddItem(
+                        new MenuItemDefinition(
+                            &quot;UserManagement&quot;,
+                            new LocalizableString(&quot;UserManagement&quot;, &quot;SimpleTaskSystem&quot;),
+                            url: &quot;/Administration/Users&quot;,
+                            icon: &quot;fa fa-users&quot;,
+                            requiredPermissionName: &quot;SimpleTaskSystem.Permissions.UserManagement&quot;
+                            )
+                    ).AddItem(
+                        new MenuItemDefinition(
+                            &quot;RoleManagement&quot;,
+                            new LocalizableString(&quot;RoleManagement&quot;, &quot;SimpleTaskSystem&quot;),
+                            url: &quot;/Administration/Roles&quot;,
+                            icon: &quot;fa fa-star&quot;,
+                            requiredPermissionName: &quot;SimpleTaskSystem.Permissions.RoleManagement&quot;
+                            )
+                    )
+            );
+    }
+}</pre>
+<p>一个 MenuItemDefinition 实例可以有一个唯一的<strong>name</strong>，一个可本地化的<strong>display name</strong>，
+一个 <strong>url</strong> 以及一个 <strong>icon</strong>。
+当然，一个菜单项需要根据权限确定是否对特定的用户显示（权限系统已经开发完毕但是还没有文档）。</p>
+<p><strong>INavigationProviderContext</strong> 拥有以下方法：获取菜单项，添加菜单及菜单项。
+这样，不同的模块可以向菜单中添加其所有的菜单项。</p>
+<p>在创建完 navigation provider 之后，我们需要通过 <a href="/Pages/Documents/Module-System">module</a> 的 
+<strong>PreInitialize</strong> 事件将其注册到 ASP.NET Boilerplate 配置信息中：</p>
+<pre lang="cs">Configuration.Navigation.Providers.Add&lt;SimpleTaskSystemNavigationProvider&gt;();&nbsp;</pre>
+
+<h3 id="DocShowMenu">显示菜单</h3>
+<p><strong>IUserNavigationManager</strong> 可以被<a href="/Pages/Documents/Dependency-Injection">注入</a> 
+用来获得菜单显示给用户。这样，我们就在服务器端创建了菜单。</p>
+<p>ASP.NET Boilerplate 会自动生成 <strong>javascript API</strong> 用来在客户端获得菜单。
+在 <strong>abp.nav</strong> 命名空间中有相关的方法和对象帮助开发者实现这个目标。
+例如，<strong>abp.nav.menus.MainMenu</strong> 可以获得应用的主菜单。
+这样，我们就可以在客户端创建菜单了。</p>
+<p>ASP.NET Boilerplate <a href="/Templates">模板</a> 使用这套系统来创建菜单。你可以使用模板创建一套代码来感受一下。</p>
+
+</body>
+
+</html>
