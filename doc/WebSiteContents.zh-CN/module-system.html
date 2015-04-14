@@ -1,0 +1,112 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+<title>Entities</title>
+<link type="text/css" rel="stylesheet" href="bootstrap.min.css" />
+</head>
+
+<body>
+
+<ul>
+	<li><a href="#DocIntroModules">模块介绍</a></li>
+	<li><a href="#DocModuleLifecycleEvents">生命周期事件</a><ul>
+		<li><a href="#DocModulePreInit">预初始化</a></li>
+		<li><a href="#DocModuleInit">初始化</a></li>
+		<li><a href="#DocModulePostInit">后初始化</a></li>
+		<li><a href="#DocModuleShutdown">关闭</a></li>
+	</ul>
+	</li>
+	<li><a href="#DocModuleDepend">模块依赖</a></li>
+	<li><a href="#DocCustomModule">定制模块方法</a></li>
+</ul>
+
+<h3 id="DocIntroModules">模块介绍</h3>
+<p>ASP.NET Boilerplate 提供了一个通过构建组合模块来创建应用的基础框架。一个模块可以依赖于另一个模块。
+通常，一个程序集被认为是一个模块。一个模块需要有一个继承自 <strong>AbpModule</strong> 的类。
+假设我们要开发一个可复用的博客模块。最简单的模块定义如下：</p>
+<pre lang="cs">public class MyBlogApplicationModule : AbpModule
+{
+    public override void Initialize()
+    {
+        IocManager.RegisterAssemblyByConvention(Assembly.GetExecutingAssembly());
+    }
+}</pre>
+<p>ASP.NET Boilerplate 会扫描所有的程序集，找到所有 AbpModule 的继承类。
+如果你的应用程序里面不止一个程序集，建议每个程序集里都创建一个模块定义类。</p>
+<h3 id="DocModuleLifecycleEvents">生命周期事件</h3>
+<p>ASP.NET Boilerplate 会在应用的启动和关闭过程中调用模块特定的方法。你可以重载这些方法来完成一些任务。</p>
+<p>ASP.NET Boilerplate 会根据<strong>依赖顺序</strong>调用这些方法。
+如果模块 A 依赖于模块 B，模块 B 将在模块 A 之前初始化。精确的顺序是：
+预初始化B (PreInitialize-B)， 预初始化A (PreInitialize-A)，初始化B (Initialize-B)，
+初始化A (Initialize-A)，后初始化B (PostInitialize-B)，后初始化A (PostInitialize-A)。
+所有的依赖过程都是如此。关闭方法类似，当然是反转的顺序。</p>
+<h4 id="DocModulePreInit">预初始化 (PreInitialize)</h4>
+<p>当应用启动时，首先调用本方法。你可以在这里编写一些在依赖注入前运行的代码。
+例如，你可以在这里注册一个新创建的传统注册类 (使用 IocManager.AddConventionalRegisterer 方法)，也可以注册 IOC 容器的事件，等等。</p>
+<h4 id="DocModuleInit">初始化 (Initialize)</h4>
+<p>通常在这里完成<a href="/Pages/Documents/Dependency-Injection">依赖注入</a>的注册。
+一般使用 IocManager.RegisterAssemblyByConvention 方法来完成注册。 
+如果你想定义一个定制的依赖注册功能，请参看相关的依赖注册文档。</p>
+<h4 id="DocModulePostInit">后初始化 (PostInitialize)</h4>
+<p>本方法是启动过程中最后调用的方法。在这里你可以很安全的使用本模块的依赖模块的功能。</p>
+<h4 id="DocModuleShutdown">关闭 (Shutdown)</h4>
+<p>本方法会在应用关闭时调用。</p>
+<h3 id="DocModuleDepend">模块依赖</h3>
+
+<p>一个模块可以依赖于另一个模块。ASP.NET Boilerplate 会尝试自动解决这些依赖关系。
+但是还是建议通过显示的声明来定义其所需的依赖类。像下面这样使用 DependsOn 元标签来声明依赖：</p>
+<pre lang="cs">[DependsOn(typeof(MyBlogCoreModule))]
+public class MyBlogApplicationModule : AbpModule
+{
+    public override void Initialize()
+    {
+        IocManager.RegisterAssemblyByConvention(Assembly.GetExecutingAssembly());
+    }
+}</pre>
+<p>这样就是向 ASP.NET Boilerplate 声明 MyBlogApplicationModule 依赖于 MyBlogCoreModule，
+core 模块会在 application 模块之前初始化。</p>
+<h3 id="DocCustomModule">定制模块方法</h3>
+<p>你的模块也可以拥有自定义的方法供其他依赖于此模块的其他模块使用。 假设 MyModule2 依赖于 MyModule1，
+想在<strong>预初始化</strong>事件中调用 MyModule1 的一个方法。</p>
+
+<pre lang="cs">public class MyModule1 : AbpModule
+{
+    public override void Initialize()
+    {
+        IocManager.RegisterAssemblyByConvention(Assembly.GetExecutingAssembly());
+    }
+
+    public void MyModuleMethod1()
+    {
+        //this is a custom method of this module
+    }
+}
+
+[DependsOn(typeof(MyModule1))]
+public class MyModule2 : AbpModule
+{
+    private readonly MyModule1 _myModule1;
+
+    public MyModule2(MyModule1 myModule1)
+    {
+        _myModule1 = myModule1;
+    }
+
+    public override void PreInitialize()
+    {
+        _myModule1.MyModuleMethod1(); //Call MyModule1's method
+    }
+
+    public override void Initialize()
+    {
+        IocManager.RegisterAssemblyByConvention(Assembly.GetExecutingAssembly());
+    }
+}</pre>
+
+<p>可以看到，我们在 MyModule2 的构造函数中注入了 MyModule1，这样 MyModule2 就可以调用 MyModule1 的自定义方法了。</p>
+
+</body>
+
+</html>
