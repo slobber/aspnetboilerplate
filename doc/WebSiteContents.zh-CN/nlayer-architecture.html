@@ -15,7 +15,7 @@
 		<li><a href="#DocDomainLayer">领域 (核心) 层</a></li>
 		<li><a href="#DocAppLayer">应用层</a></li>
 		<li><a href="#DocInfraLayer">基础架构层</a></li>
-		<li><a href="#DocPresentationLayer">网页 &amp; 展现层</a></li>
+		<li><a href="#DocPresentationLayer">网页 &amp; 表现层</a></li>
 		<li><a href="#DocOthers">其他</a></li>
 	</ul>
 	</li>
@@ -27,8 +27,8 @@
 ASP.NET Boilerplate 根据 <strong>领域驱动设计</strong> 的理念来实现这样的分层架构。
 在领域驱动设计中有四个基础层：</p>
 <ul>
-	<li><strong>展现层</strong>: 提供一个用户界面。展现层通过应用层实现用户交互。</li>
-	<li><strong>应用层</strong>: 连接展现层和领域层。精心设计的业务对象处理具体的应用任务。</li>
+	<li><strong>表现层</strong>: 提供一个用户界面。表现层通过应用层实现用户交互。</li>
+	<li><strong>应用层</strong>: 连接表现层和领域层。精心设计的业务对象处理具体的应用任务。</li>
 	<li><strong>领域层</strong>: 包括业务对象以及他们的规则。这是一个应用的核心。</li>
 	<li><strong>基础架构层</strong>: 提供通用的技术能力，支持以上这些层。
 	例如，通过 ORM 框架与数据库交互形成一个仓库。</li>
@@ -42,71 +42,71 @@ ASP.NET Boilerplate 根据 <strong>领域驱动设计</strong> 的理念来实�
 <p>以上就是以领域为中心的架构常用的分层方式。在实现上，不同的框架会有很小的不同。</p>
 
 <h3 id="DocAbpArchitecture">ASP.NET Boilerplate 架构</h3>
-<p>An overview of layers is shown below:</p>
+<p>以下是各层的概述：</p>
 
 <table class="table layers-table">
     <thead>
         <tr>
-            <th colspan="2"><h3>Layers</h3></th>
+            <th colspan="2"><h3>层</h3></th>
         </tr>
     </thead>
     <tbody>
         <tr>
             <td class="layer-name col-sm-2">
-                Presentation
+                表现
             </td>
             <td class="layer-building-blocks col-sm-10">
-                <span>View Models (Javascript)</span>
-                <span>Views (HTML/CSS)</span>
-                <span><a href="/Pages/Documents/Localization">Localization</a></span>
+                <span>视图模型 (Javascript)</span>
+                <span>视图 (HTML/CSS)</span>
+                <span><a href="/Pages/Documents/Localization">本地化</a></span>
             </td>
         </tr>
         <tr>
             <td class="layer-name">
-                Web
+                网站
             </td>
             <td class="layer-building-blocks">
-                <span>Web API Controllers</span>
-                <span>MVC Controllers</span>
+                <span>Web API 控制器</span>
+                <span>MVC 控制器</span>
             </td>
         </tr>
         <tr>
             <td class="layer-name">
-                Application
+                应用
             </td>
             <td class="layer-building-blocks">
-                <span><a href="/Pages/Documents/Application-Services">Application Services</a></span>
-                <span><a href="/Pages/Documents/Data-Transfer-Objects">DTOs</a></span>
-                <span><a href="/Pages/Documents/Data-Transfer-Objects#DocAutoMapping">DTO Mappers</a></span>
+                <span><a href="/Pages/Documents/Application-Services">应用服务</a></span>
+                <span><a href="/Pages/Documents/Data-Transfer-Objects">数据传输对象 (Dto)</a></span>
+                <span><a href="/Pages/Documents/Data-Transfer-Objects#DocAutoMapping">数据传输对象映射工具</a></span>
             </td>
         </tr>
         <tr>
             <td class="layer-name">
-                Domain
+                领域
             </td>
             <td class="layer-building-blocks">
-                <span><a href="/Pages/Documents/Entities">Entities</a></span>
-                <span>Value Objects</span>
-                <span><a href="/Pages/Documents/Repositories">Repositories</a></span>
-                <span>Business Classes</span>
-                <span>Domain Services</span>
-                <span><a href="/Pages/Documents/Unit-Of-Work">Unit of Work</a></span>
-                <span><a href="/Pages/Documents/EventBus-Domain-Events">Domain Events</a></span>
+                <span><a href="/Pages/Documents/Entities">实体</a></span>
+                <span>值对象</span>
+                <span><a href="/Pages/Documents/Repositories">仓库</a></span>
+                <span>业务类</span>
+                <span>领域服务</span>
+                <span><a href="/Pages/Documents/Unit-Of-Work">工作单元</a></span>
+                <span><a href="/Pages/Documents/EventBus-Domain-Events">领域事件</a></span>
             </td>
         </tr>
         <tr>
             <td class="layer-name">
-                Infrastructure
+                基础架构
             </td>
             <td class="layer-building-blocks">
                 <span>ORM</span>
-                <span>DB Migrations</span>
+                <span>数据库迁移</span>
             </td>
         </tr>
     </tbody>
     <thead>
         <tr>
-            <th colspan="2"><h3>Others</h3></th>
+            <th colspan="2"><h3>其他</h3></th>
         </tr>
     </thead>
     <tbody>
@@ -115,40 +115,32 @@ ASP.NET Boilerplate 根据 <strong>领域驱动设计</strong> 的理念来实�
                 Server Side
             </td>
             <td class="layer-building-blocks">
-                <span><a href="/Pages/Documents/Dependency-Injection">Dependency Injection</a></span>
-                <span><a href="/Pages/Documents/Logging">Logging</a></span>
+                <span><a href="/Pages/Documents/Dependency-Injection">依赖注入</a></span>
+                <span><a href="/Pages/Documents/Logging">日志</a></span>
             </td>
         </tr>
     </tbody>
 </table>
 
-<p>Here is a solution with five projects for a simple layered application:</p>
+<p>以下是一个简单的分层应用，包括五个项目的解决方案：</p>
 <p>
 <img alt="A solution structure" height="114" src="/SiteFiles/Content/Documents/Resources/StsSolutionStructure2.png" width="248" /></p>
-<p>A layer can be implemented as one or more assemblies. It may be especially
-good to create more than one assembly for third-party dependencies (like
-NHibernate).</p>
+<p>每一层可以通过一个或多个程序集来实现。对于第三方依赖库 (例如 NHibernate) 建立多个程序集可能更合适些。</p>
 
-<h4 id="DocDomainLayer">Domain (Core) Layer</h4>
-<p>The Domain Layer is where all business rules should be implemented.</p>
-<p><a href="/Pages/Documents/Entities">Entities</a> represent data and operations
-of the business domain. Generally they are mapped to database tables in practice.</p>
-<p><a href="/Pages/Documents/Repositories">Repositories</a> are collection-like
-objects and are used to retrieve and persist entities on a data source (database).
-The Domain Layer defines repositories, but does not implement them. They are
-implemented in the Infrastructure Layer.</p>
-<p><a href="/Pages/Documents/EventBus-Domain-Events">Domain Events</a> are used
-to define domain-specific events as well as to trigger and handle them. Domain
-services work with entities and implement business rules which do not belong
-within a single entity.</p>
-<p><a href="/Pages/Documents/Unit-Of-Work">Unit of Work</a> is a design pattern
-used to manage entities who have been affected by business logic and persist
-their state to a data store.</p>
-<p>This layer should be independent of third-party libraries as much as possible.</p>
+<h4 id="DocDomainLayer">领域 (核心) 层</h4>
+<p>所有的业务规则都应该在领域层实现。</p>
+<p><a href="/Pages/Documents/Entities">实体</a> 代表业务领域的数据和操作。在实际使用中，他们一般都会被映射到数据库的表中。</p>
+<p><a href="/Pages/Documents/Repositories">仓库</a> 是一个类似 collection 的对象，用于从数据源 (数据库) 中存取实体。
+领域层定义仓库，但并不需要实现它。他们会被基础架构层所实现。</p>
+<p><a href="/Pages/Documents/EventBus-Domain-Events">领域事件</a>用于定义领域具体事件，以及触发及处理他们。
+领域服务与实体协同工作，以及实现一些不属于单一实体的业务规则。</p>
+<p><a href="/Pages/Documents/Unit-Of-Work">工作单元</a> 是一种设计模式，
+用于管理那些由业务逻辑引起变化的实体，并在数据存储中保存他们。</p>
+<p>本层应该尽可能的独立于第三方库。</p>
 
-<h4 id="DocAppLayer">Application Layer</h4>
-<p>The Application Layer contains <a href="/Pages/Documents/Application-Services">
-application services</a> that are used by the Presentation Layer. An application
+<h4 id="DocAppLayer">应用层</h4>
+<p>应用层包括用于表现层<a href="/Pages/Documents/Application-Services">应用服务</a> 
+that are used by the Presentation Layer. An application
 service method receives a <a href="/Pages/Documents/Data-Transfer-Objects">DTO</a>
 (Data Transfer Object) as input, uses this input to perform some specific domain
 layer operation, and may return another DTO, if needed. Generally, it does not
@@ -213,19 +205,17 @@ to simplify showing system messages and notifications.</p>
 <p>ASP.NET Boilerplate automatically <a href="/Pages/Documents/Handling-Exceptions">handles exceptions</a> server-side
 and returns an appropriate response to the client.</p>
 
-<h3 id="DocOthers">Others</h3>
-<p>ASP.NET Boilerplate uses and supports <a href="/Pages/Documents/Dependency-Injection">Dependency Injection</a> through
-the <a href="http://docs.castleproject.org/Windsor.MainPage.ashx" target="_blank">Castle Windsor</a> framework.
-It also uses <a href="http://logging.apache.org/log4net/" target="_blank">Log4Net</a> for <a href="/Pages/Documents/Logging">logging</a>
-server-side, however, easily supports swapping in other logging libraries
-without code change using Castle's logging facility.</p>
+<h3 id="DocOthers">其他</h3>
+<p>ASP.NET Boilerplate 通过 <a href="http://docs.castleproject.org/Windsor.MainPage.ashx" target="_blank">Castle Windsor</a> 框架
+使用并支持 <a href="/Pages/Documents/Dependency-Injection">依赖注入</a>。
+它还使用 <a href="http://logging.apache.org/log4net/" target="_blank">Log4Net</a> 
+来实现服务器端的<a href="/Pages/Documents/Logging">日志</a>功能，
+当然你也可以通过 Castle 的日志功能很轻松的转换到其他日志库，根本不需要修改代码。</p>
 
-<h3 id="DocLayeringSummary">Summary</h3>
-<p>ASP.NET Boilerplate leverages some of the best frameworks/libraries in addition
-to its own classes and systems to provide a great infrastructure on which to
-build web applications with an NLayer architecture. It also has <a href="/Templates">templates</a>
-that can be used to easily create a layered solution as a starting point for
-your application.</p>
+<h3 id="DocLayeringSummary">总结</h3>
+<p>ASP.NET Boilerplate 将一些非常优秀的框架/库整合到它的框架中，形成了一个非常牛的
+构建 N层结构网站应用的基础架构。它还提供了一系列<a href="/Templates">模板</a>，
+可以非常方便的生成一个分层解决方案的起始结构。</p>
 
 </body>
 
