@@ -1,0 +1,420 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+<meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+<title>Dependency Injection</title>
+<link type="text/css" rel="stylesheet" href="bootstrap.min.css" />
+</head>
+
+<body>
+
+<ul>
+	<li><a href="#DocWhatIsDI">什么是依赖注入</a>
+	<ul>
+		<li><a href="#DocProblems">传统方式的问题</a></li>
+		<li><a href="#DocSolutions">解决方案</a><ul>
+			<li><a href="#DocConstructorInjection">构造函数注入</a></li>
+			<li><a href="#DocPropertyInjection">属性注入</a></li>
+		</ul>
+		</li>
+		<li><a href="#DocDIFrameworks">依赖注入框架</a></li>
+	</ul>
+	</li>
+	<li><a href="#DocAbpInfrastructure">ASP.NET Boilerplate 依赖注入的基本设施</a><ul>
+		<li><a href="#DocRegisterDependencies">注册</a><ul>
+			<li><a href="#DocConventionalRegister">基于约定的注册</a></li>
+			<li><a href="#DocHelperInterfaces">助手接口</a></li>
+			<li><a href="#DocCustomRegistration">自定义/直接注册</a></li>
+		</ul>
+		</li>
+		<li><a href="#DocResolvingDependencies">解析</a><ul>
+			<li><a href="#DocResolveConstAndProp">构造函数 &amp; 属性注入</a></li>
+			<li><a href="#DocIocHelper">IIocResolver 与 IIocManager</a></li>
+		</ul>
+		</li>
+		<li><a href="#DocExtras">扩展</a><ul>
+			<li><a href="#DocIShouldInitialize">IShouldInitialize 接口</a></li>
+		</ul>
+		</li>
+		<li><a href="#DocMvcAndWebApiIntegration">ASP.NET MVC &amp; ASP.NET Web API 的整合</a></li>
+		<li><a href="#DocLastNotes">最后的备注</a></li>
+	</ul>
+	</li>
+</ul>
+<h3 id="DocWhatIsDI">什么是依赖注入</h3>
+<p>如果你已经理解依赖注入的概念，构造函数和属性注入模式，你可以跳过本节转到<a href="#DocAbpInfrastructure">下一节</a>。</p>
+<p>维基百科上的解释： "<em>依赖注入是一种软件设计模式，将一个或多个被依赖对象（或服务）注入或通过引用的方式来传递到
+一个依赖对象（或客户端），使服务成为客户端的一部分。本模式将被服务的创建过程从客户端中分离出来，这使得
+程序设计更加松耦合并遵循依赖倒置和单一职责原则。它直接对应着 Service Locator 模式，
+此模式允许客户端了解他们所使用的查找依赖的系统机制。</em>"。</p>
+<p>如果不使用依赖注入技术，想去管理依赖并开发一个模块化的有良好架构的应用是非常困难的。</p>
+<h4 id="DocProblems">传统方式的问题</h4>
+<p>在一个应用程序中，类都是依赖于其他类的。假设我们有一个
+<a href="/Pages/Documents/Application-Services">应用服务</a>使用一个
+<a href="/Pages/Documents/Entities">仓库</a>向数据库中添加
+<a href="/Pages/Documents/Entities">实体</a>。在这个情形下，应用服务依赖于仓库类。参考示例：</p>
+<pre lang="cs">public class PersonAppService
+{
+    private IPersonRepository _personRepository;
+
+    public PersonAppService()
+    {
+        _personRepository = new PersonRepository();            
+    }
+
+    public void CreatePerson(string name, int age)
+    {
+        var person = new Person { Name = name, Age = age };
+        _personRepository.Insert(person);
+    }
+}
+</pre>
+<p><strong>PersonAppService</strong> 使用 <strong>PersonRepository</strong> 向数据库中插入了一条 
+<strong>Person</strong>。这块代码的问题是：</p>
+<ul>
+	<li>PersonAppService 在 <strong>CreatePerson</strong> 方法中使用 <strong>IPersonRepository</strong> 的引用，
+	所以此方法依赖于 IPersonRepository 接口，而不是依赖 PersonRepository 这个确切的类。但是，
+	PersonAppService 还是依赖 PersonRepository 类，因为它的构造函数中还有相关代码。
+	比起依赖实现，组件更应该依赖接口呀。这是依赖倒置中的准则。</li>
+	<li>如果 PersonAppService 类自己创建 PersonRepository 的实例，那么他就是依赖于 IPersonRepository 接口
+	的某个具体实现了，并不能和其他实现协同工作。这样，从实现中分离出来的接口也就没有存在的意义了。
+	强依赖导致了代码的紧耦合及低可复用性。</li>
+	<li>我们需要改变 PersonRepository 创建机制。也许可以将其设为单例（单独的共享实例要比每次使用时都创建实例好）。
+	或者我们可以生成一堆实现 IPersonRepository 接口的实例。
+	还可以根据条件来生成创建某一个实现。但是这样我们就必须更改所有依赖 IPersonRepository 接口的类。</li>
+	<li>而且，像这样的依赖方式，PersonAppService 就很难或者说根本不可能做单元测试了。</li>
+</ul>
+<p>为了克服这些问题，可以使用工厂模式。这样，仓库的创建过程就成为抽象的了。参考代码如下：</p>
+<pre lang="cs">public class PersonAppService
+{
+    private IPersonRepository _personRepository;
+
+    public PersonAppService()
+    {
+        _personRepository = PersonRepositoryFactory.Create();            
+    }
+
+    public void CreatePerson(string name, int age)
+    {
+        var person = new Person { Name = name, Age = age };
+        _personRepository.Insert(person);
+    }
+}
+</pre>
+
+<p>PersonRepositoryFactory 是一个静态类，负责创建并返回一个
+IPersonRepository 接口的实现类。这种方式被称为 <strong>Service Locator</strong> 模式。
+创建过程的问题被解决了，因为 PersonAppService 并不用负责它所依赖的 IPersonRepository 实现是如何创建的
+但是，这里还是有一些问题的：</p>
+<ul>
+	<li>此时，PersonAppService 依赖于 PersonRepositoryFactory。虽然这样比起之前可接受一些，但是这还是一个强依赖。</li>
+	<li>为每一个仓库、依赖都要写工厂类/方法你不觉得无聊吗。</li>
+	<li>它还是不利于测试，因为很难提供一些 IPersonRepository 模拟的实现供 PersonAppService 使用。</li>
+</ul>
+<h4 id="DocSolution">解决方案</h4>
+<p>以下是一些解决依赖的最佳实践（模式）。</p>
+<h4 id="DocConstructorInjection">构造函数注入模式</h4>
+<p>之前的例子可以写成这样的：</p>
+<pre lang="cs">public class PersonAppService
+{
+    private IPersonRepository _personRepository;
+
+    public PersonAppService(IPersonRepository personRepository)
+    {
+        _personRepository = personRepository;
+    }
+
+    public void CreatePerson(string name, int age)
+    {
+        var person = new Person { Name = name, Age = age };
+        _personRepository.Insert(person);
+    }
+}
+</pre>
+
+<p>这个模式被称为 <strong>构造函数注入 (constructor injection)</strong>。现在， 
+PersonAppService 并不知道是哪个类实现了 IPersonRepository，也不知道怎么创建的实现。
+谁使用 PersonAppService，就得先创建一个 IPersonRepository 实例，然后通过 PersonAppService 的构造函数传递进去，如下：</p>
+<pre lang="cs">var repository = new PersonRepository();
+var personService = new PersonAppService(repository);
+personService.CreatePerson("Yunus Emre", 19);</pre>
+<p>构造函数注入确实是一个解决创建依赖对象的完美方法。
+但是，上面的方法也还是有点问题的：</p>
+<ul>
+	<li>创建一个 PersonAppService 变得好困难啊。想一想，如果它有四个依赖项，我们就必须往构造函数中传递四个依赖对象。</li>
+	<li>依赖项可能还有其自己的依赖项（本例中，PersonRepository 就有可能有依赖项）。
+	所以，我们必须创建 PersonAppService 所有依赖项，以及依赖项的依赖项，以及吧啦吧啦。
+	这样下去，如果依赖树太复杂，我们可能根本无法创建一个对象了。</li>
+</ul>
+<p>幸运的是，已经有现成的<a href="#DocDIFrameworks">依赖注入框架</a>可以自动的管理依赖。</p>
+<h4 id="DocPropertyInjection">属性注入模式</h4>
+<p>构造函数注入模式是一个非常好的提供类依赖的方式。
+在这一方式中，你必须提供依赖项才能创建类实例。它同样 It's also a strong way of explicitly declaring what's 
+the requirements of the class to properly work.</p>
+<p>But, in some situations, the class depends on another class but also can work 
+without it. This is usually true for cross-cutting concerns such as logging. A 
+class can work without logging, but it can write logs if you supply a logger. In 
+this case, you can define dependencies as public properties rather than getting 
+them in constructor. Think that we want to write logs in PersonAppService. We 
+can re-write the class as like below:</p>
+<pre lang="cs">public class PersonAppService
+{
+    public ILogger Logger { get; set; }
+
+    private IPersonRepository _personRepository;
+
+    public PersonAppService(IPersonRepository personRepository)
+    {
+        _personRepository = personRepository;
+        Logger = NullLogger.Instance;
+    }
+
+    public void CreatePerson(string name, int age)
+    {
+        Logger.Debug("Inserting a new person to database with name = " + name);
+        var person = new Person { Name = name, Age = age };
+        _personRepository.Insert(person);
+        Logger.Debug("Successfully inserted!");
+    }
+}</pre>
+<p>NullLogger.Instance is a singleton object that implements ILogger but 
+actually does nothing (does not write logs. It implements ILogger with empty 
+method bodies). So, now, PersonAppService can write logs if you set Logger after 
+creating the PersonAppService object like below:</p>
+<pre lang="cs">var personService = new PersonAppService(new PersonRepository());
+personService.Logger = new Log4NetLogger();
+personService.CreatePerson("Yunus Emre", 19);</pre>
+<p>Assume that Log4NetLogger implements ILogger and write logs using Log4Net 
+library. Thus, PersonAppService can actually write logs. If we do not set 
+Logger, it does not write logs. So, we can say the ILogger is an <strong>
+optional dependency </strong>of PersonAppService.</p>
+
+<p>Almost all of Dependency Injection frameworks support Property Injection 
+pattern.</p>
+<h4 id="DocDIFrameworks">Dependency Injection frameworks</h4>
+<p>There are many dependency injection framework that automates resolving 
+dependencies. They can create objects with all dependencies (and dependencies of 
+dependencies recursively). So, you just write your class with constructor &amp; 
+property injection patterns, DI framework handles the rest! In a good 
+application, your classes are independent even from DI framework. There will be 
+a few lines of code or classes that explicitly interact with DI framework in 
+your whole application.</p>
+<p>ASP.NET Boilerplate uses <a href="http://docs.castleproject.org/Default.aspx?Page=MainPage">Castle 
+Windsor</a>  framework for Dependency Injection. It's one of the most mature DI 
+frameworks. There are many other frameworks like Unity, Ninject, StructureMap, 
+Autofac and so on.</p>
+<p>In a dependency injection framework, you first register your 
+interfaces/classes to the dependency injection framework, then you can resolve 
+(create) an object. In Castle Windsor, 
+it's something like that:</p>
+<pre>var container = new WindsorContainer();
+
+container.Register(
+        Component.For&lt;IPersonRepository&gt;().ImplementedBy&lt;PersonRepository&gt;().LifestyleTransient(),
+        Component.For&lt;IPersonAppService&gt;().ImplementedBy&lt;PersonAppService&gt;().LifestyleTransient()
+    );
+
+var personService = container.Resolve&lt;IPersonAppService&gt;();
+personService.CreatePerson(&quot;Yunus Emre&quot;, 19);</pre>
+<p>We first created the <strong>WindsorContainer</strong>. then <strong>
+registered </strong>PersonRepository and PersonAppService with their interfaces. 
+Then we asked to container to create an IPersonAppService. It created 
+PersonAppService with dependencies and returned back. Maybe it's not so clear of 
+advantage of using a DI framework in this simple example, but think you will 
+have many classes and dependencies in a real enterprise application. Surely, 
+registering dependencies will be somewhere else from creation and using objects 
+and made only one time in an application startup.</p>
+<p>Notice that we also declared <strong>life cycle </strong>of objects as
+<strong>transient</strong>. That means whenever we resolves an object of these 
+types, a new instance will be created. There are many different life cycles 
+(like <strong>singletion</strong>).</p>
+<h3 id="DocAbpInfrastructure">ASP.NET Boilerplate Dependency Injection infrastructure</h3>
+<p>ASP.NET Boilerplate almost makes invisible of using the dependency injection 
+framework when you write your application by following best practices and some 
+conventions.</p>
+<h4 id="DocRegisterDependencies">Registering</h4>
+<p>There are different ways of registering your classes to Dependency Injection 
+system in ASP.NET Boilerplate. Most of time, conventional registration will be 
+sufficient.</p>
+<h4 id="DocConventionalRegister">Conventional registrations</h4>
+
+<p>ASP.NET Boilerplate automatically registers all
+<a href="/Pages/Documents/Repositories">Repositories</a>, 
+<a href="/Pages/Documents/Domain-Services">Domain Services</a>,
+<a href="/Pages/Documents/Application-Services">Application Services</a>, MVC 
+Controllers and Web API Controllers 
+by 
+convention. For example, you may have a IPersonAppService interface and a PersonAppService 
+class that implements it:</p>
+<pre>public interface IPersonAppService : IApplicationService
+{
+    //...
+}
+
+public class PersonAppService : IPersonAppService
+{
+    //...
+}</pre>
+<p>ASP.NET Boilerplate automatically registers it since it implements <strong>
+IApplicationService </strong>interface (It's just an empty interface). It's 
+registered as <strong>transient </strong>(created instance per usage). When you 
+inject (using constructor injection) IPersonAppService interface to a class, a 
+PersonAppService object is created and passed into constructor automatically. </p>
+<p><strong>Naming conventions </strong>are very important here. For example you 
+can change name of PersonAppService to MyPersonAppService or another name which 
+contains 'PersonAppService' postfix since the IPersonAppService has this 
+postfix. But you can not name your service as PeopleService. If you do it, it's 
+not registered for IPersonAppService automatically (It's registered to DI 
+framework but with self-registration, not with interface), so, you should manually 
+register it if you want.</p>
+<p>ASP.NET Boilerplate registers assemblies by convention. So, you should tell 
+to ASP.NET Boilerplate to register your assembly by convention. It's pretty 
+easy:</p>
+<pre lang="cs">IocManager.RegisterAssemblyByConvention(Assembly.GetExecutingAssembly());</pre>
+<p>Assembly.GetExecutingAssembly() gets a reference to the assembly which 
+contains this code. You can pass other assemblies to 
+RegisterAssemblyByConvention method. This is generally done when your module is 
+being initialized. See ASP.NET Boilerplate's
+<a href="/Pages/Documents/Module-System">module system</a> for more.</p>
+<p>You can write your own conventional registration class by implementing
+<strong>IConventionalRegisterer</strong> interface and calling <strong>IocManager.AddConventionalRegisterer</strong> 
+method with your class. You should add it in pre-initialize method of your 
+module.</p>
+<h4 id="DocHelperInterfaces">Helper Interfaces</h4>
+<p>You may want to register a specific class that does not fit to conventional 
+registration rules. ASP.NET Boilerplate provides <strong>ITransientDependency</strong> and 
+<strong>ISingletonDependency</strong> interfaces as a shortcut. For example:</p>
+<pre lang="cs">public interface IPersonManager
+{
+<span lang="tr">    //...</span>
+}
+
+public class MyPersonManager : IPersonManager, ISingletonDependency
+{
+    <span lang="tr">//...</span>
+}</pre>
+<p>In that way, you can easily register MyPersonManager as transient. When need 
+to inject a IPersonManager, MyPersonManager is used. Notice that dependency is 
+declared as <strong>Singleton</strong>. Thus, a single instance of 
+MyPersonManager is created and same object is passed to all needed classes. It's 
+just created in first usage, then same instance is used in whole life of the 
+application.</p>
+
+<h4 id="DocCustomRegistration">Custom/Direct registration</h4>
+<p>If the approaches described before is no sufficient for your situation, you 
+can direcly use <strong>Castle Windsor</strong> to register your classes and dependencies. Thus, 
+you will have all capabilities of registering in Castle Windsor.</p>
+<p>Castle Windsor has <strong>IWindsorInstaller</strong> interface that can be 
+implemented for registration. You can create a class that implements IWindsorInstaller 
+interface in your application:</p>
+<pre lang="cs">public class MyInstaller : IWindsorInstaller
+{
+    public void Install(IWindsorContainer container, IConfigurationStore store)
+    {
+        container.Register(Classes.FromThisAssembly().BasedOn&lt;IMySpecialInterface&gt;().LifestylePerThread().WithServiceSelf());
+    }
+}</pre>ASP.NET Boilerplate automatically finds and executes this class. Lastly, you 
+can reach to the WindsorContainer using <strong>IIocManager.IocContainer</strong> 
+property. For more information, read
+<a href="http://docs.castleproject.org/Default.aspx?Page=MainPage">Windsor's 
+documentation</a>&nbsp;<h4 id="DocResolvingDependencies">Resolving</h4>
+<p>Registration informs IOC (Inversion of Control) Container (a.k.a. DI 
+frameowk) about your classes, their dependencies and lifecycles. Somewhere in 
+your application you need to create objects using IOC Container. ASP.NET 
+Provides a few options for resolving dependencies.</p>
+<h4 id="DocResolveConstAndProp">Constructor &amp; Property Injection</h4>
+<p>You can use constructor and property injection to get dependencies to your 
+classes as <strong>best practice</strong>. You should do it that way wherever 
+it's possible. An example:</p>
+<pre lang="cs">public class PersonAppService
+{
+    public ILogger Logger { get; set; }
+
+    private IPersonRepository _personRepository;
+
+    public PersonAppService(IPersonRepository personRepository)
+    {
+        _personRepository = personRepository;
+        Logger = NullLogger.Instance;
+    }
+
+    public void CreatePerson(string name, int age)
+    {
+        Logger.Debug("Inserting a new person to database with name = " + name);
+        var person = new Person { Name = name, Age = age };
+        _personRepository.Insert(person);
+        Logger.Debug("Successfully inserted!");
+    }
+}</pre>
+<p>IPersonRepository is injected from constructor and ILogger is injected with 
+public property. In that way, your code will be unaware of dependency injection 
+system at all. This is the most proper way of using DI system.</p>
+<h4 id="DocIocHelper">IIocResolver and IIocManager</h4>
+<p>Sometime you may have to directly resolve your dependency instead of 
+constructor &amp; property injection. This should be avoided when possible, but it 
+may be impossible. ASP.NET Boilerplate provides some services those can be injected 
+ans used easily. Example:</p>
+<pre lang="cs">public class MySampleClass : ITransientDependency
+{
+    private readonly IIocResolver _iocResolver;
+
+    public MySampleClass(IIocResolver iocResolver)
+    {
+        _iocResolver = iocResolver;
+    }
+
+    public void DoIt()
+    {
+        //Resolving, using and releasing manually
+        var personService1 = _iocResolver.Resolve&lt;PersonAppService&gt;();
+        personService1.CreatePerson(new CreatePersonInput { Name = &quot;Yunus&quot;, Surname = &quot;Emre&quot; });
+        _iocResolver.Release(personService1);
+
+        //Resolving and using in a safe way
+        using (var personService2 = _iocResolver.ResolveAsDisposable&lt;PersonAppService&gt;())
+        {
+            personService2.Object.CreatePerson(new CreatePersonInput { Name = &quot;Yunus&quot;, Surname = &quot;Emre&quot; });
+        }
+    }
+}</pre>
+<p>MySampleClass in an example class in an application. It constructor-injected
+<strong>IIcResolver</strong> and used it to resolve and release objects. There 
+are a few overloads of <strong>Resolve</strong> method can be used as needed.<strong> Release </strong>method is used to 
+release component (object). It's <strong>critical </strong>
+to call Release if you're manually resolving an object. Otherwise, your 
+application has some memory leak problem. To be sure of releasing the object, 
+use <strong>ResolveAsDisposable</strong> (as shown in the example above) 
+wherever it's possible. It automatically calls Release at the end of the using block.</p>
+<p>If you want to directly reach to IOC Container (Castle Windsor) to resolve dependencies, you 
+can consturctor-inject <strong>IIocManager</strong> and use <strong>IIocManager.IocContainer</strong> 
+property. If you are in a static context or can not inject IIocManager, as a 
+last chance, you can use singleton object <strong>IocManager.Instance</strong> 
+everywhere. But, in that case your codes will not be easy to test.</p>
+<h4>Extras</h4>
+<h5>IShouldInitialize interface</h5>
+<p>Some classes need to be initialized before first usage. IShouldInitialize has 
+an Initialize() method. If you implement it, then your Initialize() method is 
+automatically called just after creating your object (before used). Surely, you 
+should inject/resolve the object in order to work this feature.</p>
+
+<h4 id="DocMvcAndWebApiIntegration">ASP.NET MVC &amp; ASP.NET Web API integration</h4>
+<p>Surely, we must call dependency injection system to resolve the root object 
+in dependency graph. In an <strong>ASP.NET MVC </strong>application, it's 
+generally a <strong>Controller </strong>class. We can use contructor injection 
+pattern in also controllers. When a request come to our application, the 
+controller is created using IOC container and all dependencies are resolved 
+recursively. So, who does that? It's done automatically by ASP.NET Boilerplate 
+by extending ASP.NET MVC's default controller factory. As similar, it's true for 
+ASP.NET Web API also. You don't care about creating and disposing objects.</p>
+
+<h4>Last notes</h4>
+<p>ASP.NET Boilerplate simplifies and automates using dependency injection as 
+long as you follow the rules and use the structures above. Most of times you 
+will not need more. But if you need, you can directly use all power of Castle 
+Windsor to perform any task (like custom registrations, injection hooks, 
+interceptors and so on).</p>
+
+</body>
+
+</html>
